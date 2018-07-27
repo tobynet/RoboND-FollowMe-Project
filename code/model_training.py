@@ -20,7 +20,7 @@
 # We have provided you with a starting dataset for this project. Download instructions can be found in the README for this project's repo.
 # Alternatively, you can collect additional data of your own to improve your model. Check out the "Collecting Data" section in the Project Lesson in the Classroom for more details!
 
-# In[ ]:
+# In[1]:
 
 
 import os
@@ -49,7 +49,7 @@ from utils import model_tools
 # ### Separable Convolutions
 # The Encoder for your FCN will essentially require separable convolution layers, due to their advantages as explained in the classroom. The 1x1 convolution layer in the FCN, however, is a regular convolution. Implementations for both are provided below for your use. Each includes batch normalization with the ReLU activation function applied to the layers. 
 
-# In[ ]:
+# In[2]:
 
 
 def separable_conv2d_batchnorm(input_layer, filters, strides=1):
@@ -70,7 +70,7 @@ def conv2d_batchnorm(input_layer, filters, kernel_size=3, strides=1):
 # ### Bilinear Upsampling
 # The following helper function implements the bilinear upsampling layer. Upsampling by a factor of 2 is generally recommended, but you can try out different factors as well. Upsampling is used in the decoder block of the FCN.
 
-# In[ ]:
+# In[3]:
 
 
 def bilinear_upsample(input_layer):
@@ -87,12 +87,13 @@ def bilinear_upsample(input_layer):
 # ### Encoder Block
 # Create an encoder block that includes a separable convolution layer using the `separable_conv2d_batchnorm()` function. The `filters` parameter defines the size or depth of the output layer. For example, 32 or 64. 
 
-# In[ ]:
+# In[4]:
 
 
 def encoder_block(input_layer, filters, strides):
     
     # TODO Create a separable convolution layer using the separable_conv2d_batchnorm() function.
+    output_layer = separable_conv2d_batchnorm(input_layer, filters, strides)
     
     return output_layer
 
@@ -103,16 +104,19 @@ def encoder_block(input_layer, filters, strides):
 # - A layer concatenation step. This step is similar to skip connections. You will concatenate the upsampled small_ip_layer and the large_ip_layer.
 # - Some (one or two) additional separable convolution layers to extract some more spatial information from prior layers.
 
-# In[ ]:
+# In[5]:
 
 
 def decoder_block(small_ip_layer, large_ip_layer, filters):
     
     # TODO Upsample the small input layer using the bilinear_upsample() function.
+    upsampled_layer = bilinear_upsample(small_ip_layer)
     
     # TODO Concatenate the upsampled and large input layers using layers.concatenate
+    concatenated_layer = keras.layers.concatenate([upsampled_layer, large_ip_layer])
     
     # TODO Add some number of separable convolution layers
+    output_layer = separable_conv2d_batchnorm(concatenated_layer, filters)
     
     return output_layer
 
@@ -126,18 +130,33 @@ def decoder_block(small_ip_layer, large_ip_layer, filters):
 # - Add a 1x1 Convolution layer using the conv2d_batchnorm() function. Remember that 1x1 Convolutions require a kernel and stride of 1.
 # - Add decoder blocks for the decoder layers.
 
-# In[ ]:
+# In[6]:
 
 
 def fcn_model(inputs, num_classes):
     
     # TODO Add Encoder Blocks. 
     # Remember that with each encoder layer, the depth of your model (the number of filters) increases.
+    encoded_layer1 = encoder_block(inputs,         filters=16, strides=2)
+    encoded_layer2 = encoder_block(encoded_layer1, filters=32, strides=2)
+    encoded_layer3 = encoder_block(encoded_layer2, filters=64, strides=2)
+    print(' | -> encoded_layer1:', encoded_layer1)
+    print('  | -> encoded_layer2:', encoded_layer2)
+    print('   | -> encoded_layer3:', encoded_layer3)
 
     # TODO Add 1x1 Convolution layer using conv2d_batchnorm().
+    layer_1x1 = conv2d_batchnorm(encoded_layer3, 128, kernel_size=1, strides=1)
+    print('    | -> layer_1x1:', layer_1x1)
     
     # TODO: Add the same number of Decoder Blocks as the number of Encoder Blocks
+    decoded_layer1 = decoder_block(layer_1x1,      encoded_layer2, filters=64)
+    decoded_layer2 = decoder_block(decoded_layer1, encoded_layer1, filters=32)
+    decoded_layer3 = decoder_block(decoded_layer2, inputs,         filters=16)
+    print('   | -> decoded_layer1:', decoded_layer1)
+    print('  | -> decoded_layer2:', decoded_layer2)
+    print(' | -> decoded_layer3:', decoded_layer3)
     
+    x = decoded_layer3
     
     # The function returns the output layer of your model. "x" is the final layer obtained from the last decoder_block()
     return layers.Conv2D(num_classes, 1, activation='softmax', padding='same')(x)
@@ -148,7 +167,7 @@ def fcn_model(inputs, num_classes):
 # 
 # Please Note: For this project, the helper code in `data_iterator.py` will resize the copter images to 160x160x3 to speed up training.
 
-# In[ ]:
+# In[7]:
 
 
 """
@@ -160,8 +179,11 @@ image_shape = (image_hw, image_hw, 3)
 inputs = layers.Input(image_shape)
 num_classes = 3
 
+print('inputs:', inputs) # For debugging
+
 # Call fcn_model()
 output_layer = fcn_model(inputs, num_classes)
+print(' => output_layer:', output_layer) # For debugging
 
 
 # ### Hyperparameters
@@ -172,51 +194,57 @@ output_layer = fcn_model(inputs, num_classes)
 # - **validation_steps**: number of batches of validation images that go through the network in 1 epoch. This is similar to steps_per_epoch, except validation_steps is for the validation dataset. We have provided you with a default value for this as well.
 # - **workers**: maximum number of processes to spin up. This can affect your training speed and is dependent on your hardware. We have provided a recommended value to work with. 
 
-# In[ ]:
+# In[8]:
 
 
-learning_rate = 0
-batch_size = 0
-num_epochs = 0
-steps_per_epoch = 200
+learning_rate = 0.004
+batch_size = 50
+num_epochs = 100
+steps_per_epoch = 40
 validation_steps = 50
-workers = 2
+workers = 4
 
 
-# In[ ]:
+# In[9]:
 
 
-"""
-DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
-"""
 # Define the Keras model and compile it for training
 model = models.Model(inputs=inputs, outputs=output_layer)
-
 model.compile(optimizer=keras.optimizers.Adam(learning_rate), loss='categorical_crossentropy')
 
-# Data iterators for loading the training and validation data
-train_iter = data_iterator.BatchIteratorSimple(batch_size=batch_size,
-                                               data_folder=os.path.join('..', 'data', 'train'),
-                                               image_shape=image_shape,
-                                               shift_aug=True)
 
-val_iter = data_iterator.BatchIteratorSimple(batch_size=batch_size,
-                                             data_folder=os.path.join('..', 'data', 'validation'),
-                                             image_shape=image_shape)
-
-logger_cb = plotting_tools.LoggerPlotter()
-callbacks = [logger_cb]
-
-model.fit_generator(train_iter,
-                    steps_per_epoch = steps_per_epoch, # the number of batches per epoch,
-                    epochs = num_epochs, # the number of epochs to train for,
-                    validation_data = val_iter, # validation iterator
-                    validation_steps = validation_steps, # the number of batches to validate on
-                    callbacks=callbacks,
-                    workers = workers)
+# In[10]:
 
 
-# In[ ]:
+# Visualize model
+## Needs installing graphiz and pydot_ng from pip
+## Windows:
+##   $ scoop install graphviz
+## Else:
+##   $ conda install graphviz
+## And:
+##   $ pip install pydot_ng
+
+svg = None
+try:
+    from tensorflow.contrib.keras.python.keras.utils.vis_utils import model_to_dot
+    from IPython.display import SVG
+    svg = SVG(model_to_dot(model).create(prog='dot', format='svg'))
+except (ImportError, Exception) as e:
+    print(e, file=sys.stderr)
+    print('It could not snow visualize model. This is NOT error. ', file=sys.stderr)
+except:
+    raise
+svg
+
+
+# In[11]:
+
+
+get_ipython().run_cell_magic('time', '', '"""\nDON\'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE\n"""\n# # Define the Keras model and compile it for training\n# model = models.Model(inputs=inputs, outputs=output_layer)\n#\n# model.compile(optimizer=keras.optimizers.Adam(learning_rate), loss=\'categorical_crossentropy\')\n\n# Data iterators for loading the training and validation data\ntrain_iter = data_iterator.BatchIteratorSimple(batch_size=batch_size,\n                                               data_folder=os.path.join(\'..\', \'data\', \'train\'),\n                                               image_shape=image_shape,\n                                               shift_aug=True)\n\nval_iter = data_iterator.BatchIteratorSimple(batch_size=batch_size,\n                                             data_folder=os.path.join(\'..\', \'data\', \'validation\'),\n                                             image_shape=image_shape)\n\nlogger_cb = plotting_tools.LoggerPlotter()\ncallbacks = [logger_cb]\n\nmodel.fit_generator(train_iter,\n                    steps_per_epoch = steps_per_epoch, # the number of batches per epoch,\n                    epochs = num_epochs, # the number of epochs to train for,\n                    validation_data = val_iter, # validation iterator\n                    validation_steps = validation_steps, # the number of batches to validate on\n                    callbacks=callbacks,\n                    workers = workers)')
+
+
+# In[12]:
 
 
 # Save your trained model weights
@@ -245,7 +273,7 @@ model_tools.save_network(model, weight_file_name)
 # The following cell will write predictions to files and return paths to the appropriate directories.
 # The `run_num` parameter is used to define or group all the data for a particular model run. You can change it for different runs. For example, 'run_1', 'run_2' etc.
 
-# In[ ]:
+# In[13]:
 
 
 run_num = 'run_1'
@@ -263,7 +291,7 @@ val_following, pred_following = model_tools.write_predictions_grade_set(model,
 # Now lets look at your predictions, and compare them to the ground truth labels and original images.
 # Run each of the following cells to visualize some sample images from the predictions in the validation set.
 
-# In[ ]:
+# In[18]:
 
 
 # images while following the target
@@ -274,7 +302,7 @@ for i in range(3):
     
 
 
-# In[ ]:
+# In[25]:
 
 
 # images while at patrol without target
@@ -285,7 +313,7 @@ for i in range(3):
  
 
 
-# In[ ]:
+# In[29]:
 
 
 
@@ -299,28 +327,28 @@ for i in range(3):
 # ## Evaluation <a id='evaluation'></a>
 # Evaluate your model! The following cells include several different scores to help you evaluate your model under the different conditions discussed during the Prediction step. 
 
-# In[ ]:
+# In[30]:
 
 
 # Scores for while the quad is following behind the target. 
 true_pos1, false_pos1, false_neg1, iou1 = scoring_utils.score_run_iou(val_following, pred_following)
 
 
-# In[ ]:
+# In[31]:
 
 
 # Scores for images while the quad is on patrol and the target is not visable
 true_pos2, false_pos2, false_neg2, iou2 = scoring_utils.score_run_iou(val_no_targ, pred_no_targ)
 
 
-# In[ ]:
+# In[32]:
 
 
 # This score measures how well the neural network can detect the target from far away
 true_pos3, false_pos3, false_neg3, iou3 = scoring_utils.score_run_iou(val_with_targ, pred_with_targ)
 
 
-# In[ ]:
+# In[33]:
 
 
 # Sum all the true positives, etc from the three datasets to get a weight for the score
@@ -332,7 +360,7 @@ weight = true_pos/(true_pos+false_neg+false_pos)
 print(weight)
 
 
-# In[ ]:
+# In[34]:
 
 
 # The IoU for the dataset that never includes the hero is excluded from grading
@@ -340,7 +368,7 @@ final_IoU = (iou1 + iou3)/2
 print(final_IoU)
 
 
-# In[ ]:
+# In[35]:
 
 
 # And the final grade score is 
