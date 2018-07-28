@@ -20,7 +20,7 @@
 # We have provided you with a starting dataset for this project. Download instructions can be found in the README for this project's repo.
 # Alternatively, you can collect additional data of your own to improve your model. Check out the "Collecting Data" section in the Project Lesson in the Classroom for more details!
 
-# In[1]:
+# In[3]:
 
 
 import os
@@ -49,7 +49,7 @@ from utils import model_tools
 # ### Separable Convolutions
 # The Encoder for your FCN will essentially require separable convolution layers, due to their advantages as explained in the classroom. The 1x1 convolution layer in the FCN, however, is a regular convolution. Implementations for both are provided below for your use. Each includes batch normalization with the ReLU activation function applied to the layers. 
 
-# In[2]:
+# In[4]:
 
 
 def separable_conv2d_batchnorm(input_layer, filters, strides=1):
@@ -70,7 +70,7 @@ def conv2d_batchnorm(input_layer, filters, kernel_size=3, strides=1):
 # ### Bilinear Upsampling
 # The following helper function implements the bilinear upsampling layer. Upsampling by a factor of 2 is generally recommended, but you can try out different factors as well. Upsampling is used in the decoder block of the FCN.
 
-# In[3]:
+# In[5]:
 
 
 def bilinear_upsample(input_layer):
@@ -87,7 +87,7 @@ def bilinear_upsample(input_layer):
 # ### Encoder Block
 # Create an encoder block that includes a separable convolution layer using the `separable_conv2d_batchnorm()` function. The `filters` parameter defines the size or depth of the output layer. For example, 32 or 64. 
 
-# In[4]:
+# In[6]:
 
 
 def encoder_block(input_layer, filters, strides):
@@ -104,7 +104,7 @@ def encoder_block(input_layer, filters, strides):
 # - A layer concatenation step. This step is similar to skip connections. You will concatenate the upsampled small_ip_layer and the large_ip_layer.
 # - Some (one or two) additional separable convolution layers to extract some more spatial information from prior layers.
 
-# In[5]:
+# In[7]:
 
 
 def decoder_block(small_ip_layer, large_ip_layer, filters):
@@ -116,8 +116,8 @@ def decoder_block(small_ip_layer, large_ip_layer, filters):
     concatenated_layer = keras.layers.concatenate([upsampled_layer, large_ip_layer])
     
     # TODO Add some number of separable convolution layers
-    output_layer1 = separable_conv2d_batchnorm(concatenated_layer, filters)
-    output_layer2 = separable_conv2d_batchnorm(output_layer1, filters)
+    output_layer1 = separable_conv2d_batchnorm(concatenated_layer, filters=1)
+    output_layer2 = separable_conv2d_batchnorm(output_layer1, filters=1)
     
     return output_layer2
 
@@ -131,7 +131,7 @@ def decoder_block(small_ip_layer, large_ip_layer, filters):
 # - Add a 1x1 Convolution layer using the conv2d_batchnorm() function. Remember that 1x1 Convolutions require a kernel and stride of 1.
 # - Add decoder blocks for the decoder layers.
 
-# In[6]:
+# In[8]:
 
 
 def fcn_model(inputs, num_classes):
@@ -168,7 +168,7 @@ def fcn_model(inputs, num_classes):
 # 
 # Please Note: For this project, the helper code in `data_iterator.py` will resize the copter images to 160x160x3 to speed up training.
 
-# In[7]:
+# In[9]:
 
 
 """
@@ -195,18 +195,18 @@ print(' => output_layer:', output_layer) # For debugging
 # - **validation_steps**: number of batches of validation images that go through the network in 1 epoch. This is similar to steps_per_epoch, except validation_steps is for the validation dataset. We have provided you with a default value for this as well.
 # - **workers**: maximum number of processes to spin up. This can affect your training speed and is dependent on your hardware. We have provided a recommended value to work with. 
 
-# In[8]:
+# In[10]:
 
 
-learning_rate = 0.002
-batch_size = 60
-num_epochs = 100
-steps_per_epoch = 40
+learning_rate = 0.004
+batch_size = 50
+num_epochs = 50
+steps_per_epoch = 200
 validation_steps = 50
 workers = 4
 
 
-# In[9]:
+# In[11]:
 
 
 # Define the Keras model and compile it for training
@@ -214,7 +214,7 @@ model = models.Model(inputs=inputs, outputs=output_layer)
 model.compile(optimizer=keras.optimizers.Adam(learning_rate), loss='categorical_crossentropy')
 
 
-# In[10]:
+# In[12]:
 
 
 # Visualize model
@@ -239,13 +239,13 @@ except:
 svg
 
 
-# In[11]:
+# In[13]:
 
 
 get_ipython().run_cell_magic('time', '', '"""\nDON\'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE\n"""\n# # Define the Keras model and compile it for training\n# model = models.Model(inputs=inputs, outputs=output_layer)\n#\n# model.compile(optimizer=keras.optimizers.Adam(learning_rate), loss=\'categorical_crossentropy\')\n\n# Data iterators for loading the training and validation data\ntrain_iter = data_iterator.BatchIteratorSimple(batch_size=batch_size,\n                                               data_folder=os.path.join(\'..\', \'data\', \'train\'),\n                                               image_shape=image_shape,\n                                               shift_aug=True)\n\nval_iter = data_iterator.BatchIteratorSimple(batch_size=batch_size,\n                                             data_folder=os.path.join(\'..\', \'data\', \'validation\'),\n                                             image_shape=image_shape)\n\nlogger_cb = plotting_tools.LoggerPlotter()\ncallbacks = [logger_cb]\n\nmodel.fit_generator(train_iter,\n                    steps_per_epoch = steps_per_epoch, # the number of batches per epoch,\n                    epochs = num_epochs, # the number of epochs to train for,\n                    validation_data = val_iter, # validation iterator\n                    validation_steps = validation_steps, # the number of batches to validate on\n                    callbacks=callbacks,\n                    workers = workers)')
 
 
-# In[12]:
+# In[14]:
 
 
 # Save your trained model weights
@@ -262,7 +262,7 @@ model_tools.save_network(model, weight_file_name)
 # - **patrol_non_targ**: Test how often the network makes a mistake and identifies the wrong person as the target.
 # - **following_images**: Test how well the network can identify the target while following them.
 
-# In[ ]:
+# In[15]:
 
 
 # If you need to load a model which you previously trained you can uncomment the codeline that calls the function below.
@@ -274,7 +274,7 @@ model_tools.save_network(model, weight_file_name)
 # The following cell will write predictions to files and return paths to the appropriate directories.
 # The `run_num` parameter is used to define or group all the data for a particular model run. You can change it for different runs. For example, 'run_1', 'run_2' etc.
 
-# In[13]:
+# In[16]:
 
 
 run_num = 'run_1'
@@ -292,7 +292,7 @@ val_following, pred_following = model_tools.write_predictions_grade_set(model,
 # Now lets look at your predictions, and compare them to the ground truth labels and original images.
 # Run each of the following cells to visualize some sample images from the predictions in the validation set.
 
-# In[14]:
+# In[17]:
 
 
 # images while following the target
@@ -303,7 +303,7 @@ for i in range(3):
     
 
 
-# In[35]:
+# In[38]:
 
 
 # images while at patrol without target
@@ -314,7 +314,7 @@ for i in range(3):
  
 
 
-# In[39]:
+# In[42]:
 
 
 
@@ -328,28 +328,28 @@ for i in range(3):
 # ## Evaluation <a id='evaluation'></a>
 # Evaluate your model! The following cells include several different scores to help you evaluate your model under the different conditions discussed during the Prediction step. 
 
-# In[17]:
+# In[20]:
 
 
 # Scores for while the quad is following behind the target. 
 true_pos1, false_pos1, false_neg1, iou1 = scoring_utils.score_run_iou(val_following, pred_following)
 
 
-# In[18]:
+# In[21]:
 
 
 # Scores for images while the quad is on patrol and the target is not visable
 true_pos2, false_pos2, false_neg2, iou2 = scoring_utils.score_run_iou(val_no_targ, pred_no_targ)
 
 
-# In[19]:
+# In[22]:
 
 
 # This score measures how well the neural network can detect the target from far away
 true_pos3, false_pos3, false_neg3, iou3 = scoring_utils.score_run_iou(val_with_targ, pred_with_targ)
 
 
-# In[20]:
+# In[23]:
 
 
 # Sum all the true positives, etc from the three datasets to get a weight for the score
@@ -361,7 +361,7 @@ weight = true_pos/(true_pos+false_neg+false_pos)
 print(weight)
 
 
-# In[21]:
+# In[24]:
 
 
 # The IoU for the dataset that never includes the hero is excluded from grading
@@ -369,7 +369,7 @@ final_IoU = (iou1 + iou3)/2
 print(final_IoU)
 
 
-# In[22]:
+# In[25]:
 
 
 # And the final grade score is 
