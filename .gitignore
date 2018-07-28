@@ -103,3 +103,5 @@ ENV/
 
 RUNS/
 
+/data/raw_sim_data
+/data/processed_sim_data
