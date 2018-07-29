@@ -73,10 +73,10 @@ def get_failed_im_file_sample(grading_dir_name, subset_name, out_folder_suffix =
     return list(zip(ims_subset, masks_subset, preds_subset)), n_preds, n_false_pos, n_false_neg
 
 
-# In[75]:
+# In[79]:
 
 
-def show_samples(grading_data_dir_name, subset_name, num_of_samples = 100, run_num = 'run_1'):
+def show_failed_samples(grading_data_dir_name, subset_name, num_of_samples = 100, run_num = 'run_1'):
     """Predicted Samples Viewer"""
     # Count all iamges
     path = os.path.join('..', 'data', grading_data_dir_name)
@@ -98,9 +98,8 @@ def show_samples(grading_data_dir_name, subset_name, num_of_samples = 100, run_n
         im_tuple = plotting_tools.load_images(im_files[i])
         plotting_tools.show_images(im_tuple)
         
-show_samples(
+show_failed_samples(
     grading_data_dir_name, 
-
     #subset_name='following_images',
     subset_name='patrol_non_targ',
     #subset_name='patrol_with_targ', 
